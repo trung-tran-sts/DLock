@@ -5,6 +5,12 @@ VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DLock", "DLock\DLock.csproj", "{03BEE31A-CED5-427E-A1EF-4EF01B08BAB3}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SimpleDLM", "SimpleDLM", "{AF6071C6-0A81-472A-9093-8C7F5B7C61B1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DLock.SimpleDLM", "SimpleDLM\DLock.SimpleDLM\DLock.SimpleDLM.csproj", "{F8FB2D19-FDA2-429A-B914-1F06861DA154}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DLock.LockClient", "DLock.LockClient\DLock.LockClient.csproj", "{2E4A20F1-5B8F-41E5-8C53-9BD03342D60C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,9 +21,20 @@ Global
 		{03BEE31A-CED5-427E-A1EF-4EF01B08BAB3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03BEE31A-CED5-427E-A1EF-4EF01B08BAB3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{03BEE31A-CED5-427E-A1EF-4EF01B08BAB3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8FB2D19-FDA2-429A-B914-1F06861DA154}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8FB2D19-FDA2-429A-B914-1F06861DA154}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8FB2D19-FDA2-429A-B914-1F06861DA154}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8FB2D19-FDA2-429A-B914-1F06861DA154}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E4A20F1-5B8F-41E5-8C53-9BD03342D60C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E4A20F1-5B8F-41E5-8C53-9BD03342D60C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E4A20F1-5B8F-41E5-8C53-9BD03342D60C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E4A20F1-5B8F-41E5-8C53-9BD03342D60C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F8FB2D19-FDA2-429A-B914-1F06861DA154} = {AF6071C6-0A81-472A-9093-8C7F5B7C61B1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2392D425-DBCD-4CBC-B6D8-30CC9FBC1FB3}
