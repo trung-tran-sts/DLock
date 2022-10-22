@@ -1,5 +1,4 @@
-﻿using DLock.SimpleDLM.Models;
-using DLock.SimpleDLM.Services;
+﻿using DLock.SimpleDLM.Services;
 using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Threading.Tasks;
@@ -22,19 +21,7 @@ namespace DLock.SimpleDLM.Hubs
 
         public async Task<string> AcquireLockAsync(string resource, int timeoutMs, int waitTimeoutMs)
         {
-            string lockId = Guid.NewGuid().ToString();
-
-            Console.WriteLine($"{lockId} is acquiring lock {resource}");
-
-            await Groups.AddToGroupAsync(Context.ConnectionId, lockId);
-
-            await _distributedLockManager.AcquireLockAsync(new LockRequest
-            {
-                LockId = lockId,
-                Resource = resource,
-                TimeoutMs = timeoutMs,
-                WaitUntil = DateTime.UtcNow.AddMilliseconds(waitTimeoutMs)
-            });
+            string lockId = await _distributedLockManager.AcquireLockAsync(resource, timeoutMs, waitTimeoutMs, Context.ConnectionId);
 
             return lockId;
         }

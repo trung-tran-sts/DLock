@@ -11,7 +11,7 @@ namespace DLock.SimpleDLM.Services
 {
     public interface IDistributedLockManager
     {
-        Task AcquireLockAsync(LockRequest lockRequest);
+        Task<string> AcquireLockAsync(string resource, int timeoutMs, int waitTimeoutMs, string connectionId);
         Task ReleaseLockAsync(string lockId);
     }
 
@@ -32,8 +32,22 @@ namespace DLock.SimpleDLM.Services
             _lockInfoByIdMap = new ConcurrentDictionary<string, AcquiredLockInfo>();
         }
 
-        public async Task AcquireLockAsync(LockRequest lockRequest)
+        public async Task<string> AcquireLockAsync(string resource, int timeoutMs, int waitTimeoutMs, string connectionId)
         {
+            string lockId = Guid.NewGuid().ToString();
+
+            LockRequest lockRequest = new LockRequest
+            {
+                LockId = lockId,
+                Resource = resource,
+                TimeoutMs = timeoutMs,
+                WaitUntil = DateTime.UtcNow.AddMilliseconds(waitTimeoutMs)
+            };
+
+            Console.WriteLine($"{lockId} is acquiring lock {resource}");
+
+            await _locksHubContext.Groups.AddToGroupAsync(connectionId, lockId);
+
             CustomSemaphoreSlim semaphore = null;
 
             try
@@ -63,6 +77,8 @@ namespace DLock.SimpleDLM.Services
             {
                 semaphore?.Release();
             }
+
+            return lockId;
         }
 
         public async Task ReleaseLockAsync(string lockId)
