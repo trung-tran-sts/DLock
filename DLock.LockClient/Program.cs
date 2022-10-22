@@ -36,11 +36,7 @@ namespace DLock.LockClient
 
         static async Task RunSimpleDLM()
         {
-            string locksHubUrl = _configuration["SimpleDLMLocksHubUrl"];
-
-            SimpleDLMLockClient lockClient = new SimpleDLMLockClient();
-
-            await lockClient.TryInitializeAsync(locksHubUrl);
+            SimpleDLMLockClient lockClient = new SimpleDLMLockClient(_configuration);
 
             await ProcessWithLock(lockClient);
         }

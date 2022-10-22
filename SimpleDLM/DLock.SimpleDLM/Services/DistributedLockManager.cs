@@ -175,7 +175,7 @@ namespace DLock.SimpleDLM.Services
 
                 Console.WriteLine($"Acquired lock {lockRequest.Resource} with lock id {lockRequest.LockId}");
 
-                await _locksHubContext.Clients.Group(lockRequest.LockId).NotifyLockAcquired(lockRequest.Resource);
+                await _locksHubContext.Clients.Group(lockRequest.LockId).NotifyLockAcquired();
 
                 return true;
             }

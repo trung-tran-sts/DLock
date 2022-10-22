@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
@@ -8,56 +9,61 @@ namespace DLock.LockClient.Services
 {
     public class SimpleDLMLockClient : ILockClient
     {
-        private HubConnection _hubConnection;
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _lockWaitMap;
-
+        private readonly string _locksHubUrl;
         public string Implementation => "Simple DLM";
 
-        public SimpleDLMLockClient()
+        public SimpleDLMLockClient(IConfiguration configuration)
         {
+            _locksHubUrl = configuration["SimpleDLMLocksHubUrl"];
+
             _lockWaitMap = new ConcurrentDictionary<string, SemaphoreSlim>();
-        }
-
-        public Task TryInitializeAsync(string lockHubUrl)
-        {
-            if (_hubConnection == null)
-            {
-                _hubConnection = new HubConnectionBuilder()
-                    .WithUrl(lockHubUrl)
-                    .WithAutomaticReconnect()
-                    .Build();
-
-                _hubConnection.On<string>("NotifyLockAcquired", (resource) =>
-                {
-                    ReleaseLocalLock(resource);
-                });
-            }
-
-            return Task.CompletedTask;
         }
 
         public async Task<string> AcquireLockAsync(string resource, int timeoutMs, TimeSpan waitTimeout)
         {
             SemaphoreSlim lockWait = _lockWaitMap.GetOrAdd(resource, (_) => new SemaphoreSlim(0, 1));
 
-            await _hubConnection.StopAsync();
-            await _hubConnection.StartAsync();
-            string lockId = await _hubConnection.InvokeAsync<string>("AcquireLockAsync", resource, timeoutMs, waitTimeout.TotalMilliseconds);
+            HubConnection hubConnection = GetHubConnection();
 
-            bool acquired = lockWait.Wait(waitTimeout);
-
-            if (!acquired)
+            hubConnection.On("NotifyLockAcquired", () =>
             {
-                throw new Exception("Timeout waiting for the lock");
-            }
+                ReleaseLocalLock(resource);
+            });
 
-            return lockId;
+            try
+            {
+                await hubConnection.StartAsync();
+
+                string lockId = await hubConnection.InvokeAsync<string>("AcquireLockAsync", resource, timeoutMs, waitTimeout.TotalMilliseconds);
+
+                bool acquired = lockWait.Wait(waitTimeout);
+
+                if (!acquired)
+                {
+                    throw new Exception("Timeout waiting for the lock");
+                }
+
+                return lockId;
+            }
+            finally
+            {
+                if (hubConnection != null) await hubConnection?.DisposeAsync();
+            }
         }
 
         public async Task ReleaseLockAsync(string lockId)
         {
-            await _hubConnection.InvokeAsync("ReleaseLockAsync", lockId);
-            await _hubConnection.StopAsync();
+            HubConnection hubConnection = GetHubConnection();
+            try
+            {
+                await hubConnection.StartAsync();
+                await hubConnection.InvokeAsync("ReleaseLockAsync", lockId);
+            }
+            finally
+            {
+                if (hubConnection != null) await hubConnection?.DisposeAsync();
+            }
         }
 
         private void ReleaseLocalLock(string resource)
@@ -67,5 +73,16 @@ namespace DLock.LockClient.Services
                 lockWait.Release();
             }
         }
+
+        private HubConnection GetHubConnection()
+        {
+            HubConnection hubConnection = new HubConnectionBuilder()
+                .WithUrl(_locksHubUrl)
+                .WithAutomaticReconnect()
+                .Build();
+
+            return hubConnection;
+        }
+
     }
 }

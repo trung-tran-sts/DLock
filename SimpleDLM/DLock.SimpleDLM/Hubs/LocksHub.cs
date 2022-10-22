@@ -7,7 +7,7 @@ namespace DLock.SimpleDLM.Hubs
 {
     public interface ILocksHubClient
     {
-        Task NotifyLockAcquired(string resource);
+        Task NotifyLockAcquired();
     }
 
     public class LocksHub : Hub<ILocksHubClient>
