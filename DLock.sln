@@ -14,8 +14,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RedLockRedis", "RedLockRedis", "{B6C24023-21ED-45F3-8AE9-74457A96B4F5}"
 	ProjectSection(SolutionItems) = preProject
 		RedLockRedis\docker-compose.yml = RedLockRedis\docker-compose.yml
-		RedLockRedis\rep-redis.conf = RedLockRedis\rep-redis.conf
-		RedLockRedis\ReplicaDockerfile = RedLockRedis\ReplicaDockerfile
 	EndProjectSection
 EndProject
 Global

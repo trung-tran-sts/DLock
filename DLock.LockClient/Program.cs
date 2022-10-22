@@ -29,7 +29,7 @@ namespace DLock.LockClient
             switch (choice)
             {
                 case 1: await RunSimpleDLM(); break;
-                case 2: await RunSingleRedis(); break;
+                case 2: await RunRedLockRedis(); break;
                 default: Console.WriteLine("Invalid choice"); break;
             }
         }
@@ -45,7 +45,7 @@ namespace DLock.LockClient
             await ProcessWithLock(lockClient);
         }
 
-        static async Task RunSingleRedis()
+        static async Task RunRedLockRedis()
         {
             IEnumerable<string> redisEndpoints = _configuration.GetSection("RedisEndpoints").Get<IEnumerable<string>>();
 

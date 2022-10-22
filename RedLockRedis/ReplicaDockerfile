@@ -1,6 +1,0 @@
-FROM redis:7.0.5-alpine
-ARG REPLICA_PORT
-
-COPY rep-redis.conf /config/redis.conf
-
-RUN sed -i -e "s/{REPLICA_PORT}/$REPLICA_PORT/g" /config/redis.conf

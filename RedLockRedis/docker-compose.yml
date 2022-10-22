@@ -1,75 +1,30 @@
 version: "3.8"
 services:
-  redis-dlm-master:
+  redis-dlm-1:
     image: redis:7.0.5-alpine
     ports:
       - "6379:6379"
 
-  redis-dlm-1:
-    image: dlock:redis-rep
-    build:
-      context: .
-      args:
-        - REPLICA_PORT=6380
-      dockerfile: ReplicaDockerfile
+  redis-dlm-2:
+    image: redis:7.0.5-alpine
     ports:
       - "6380:6379"
-    depends_on:
-      - redis-dlm-master
-    command: ["redis-server", "/config/redis.conf"]
-  
-  redis-dlm-2:
-    image: dlock:redis-rep
-    build:
-      context: .
-      args:
-        - REPLICA_PORT=6381
-      dockerfile: ReplicaDockerfile
+
+  redis-dlm-3:
+    image: redis:7.0.5-alpine
     ports:
       - "6381:6379"
-    depends_on:
-      - redis-dlm-master
-    command: ["redis-server", "/config/redis.conf"]
-    
-  redis-dlm-3:
-    image: dlock:redis-rep
-    build:
-      context: .
-      args:
-        - REPLICA_PORT=6382
-      dockerfile: ReplicaDockerfile
+
+  redis-dlm-4:
+    image: redis:7.0.5-alpine
     ports:
       - "6382:6379"
-    depends_on:
-      - redis-dlm-master
-    command: ["redis-server", "/config/redis.conf"]
-    
-  redis-dlm-4:
-    image: dlock:redis-rep
-    build:
-      context: .
-      args:
-        - REPLICA_PORT=6383
-      dockerfile: ReplicaDockerfile
+
+  redis-dlm-5:
+    image: redis:7.0.5-alpine
     ports:
       - "6383:6379"
-    depends_on:
-      - redis-dlm-master
-    command: ["redis-server", "/config/redis.conf"]
-    
-  redis-dlm-5:
-    image: dlock:redis-rep
-    build:
-      context: .
-      args:
-        - REPLICA_PORT=6384
-      dockerfile: ReplicaDockerfile
-    ports:
-      - "6384:6379"
-    depends_on:
-      - redis-dlm-master
-    command: ["redis-server", "/config/redis.conf"]
-    
+
 networks:
   default:
     name: redis-dlm-shared

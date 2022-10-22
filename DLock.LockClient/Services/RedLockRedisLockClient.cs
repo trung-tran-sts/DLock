@@ -11,7 +11,6 @@ namespace DLock.LockClient.Services
 {
     public class RedLockRedisLockClient : ILockClient, IDisposable
     {
-        private ConnectionMultiplexer _connection;
         private RedLockFactory _redlockFactory;
         private bool disposedValue;
         private readonly ConcurrentDictionary<string, IRedLock> _lockMap;
@@ -49,26 +48,25 @@ namespace DLock.LockClient.Services
 
         public Task TryInitializeAsync(IEnumerable<string> redisEndpoints)
         {
-            if (_connection == null)
+            if (_redlockFactory == null)
             {
-                ConfigurationOptions cfg = new ConfigurationOptions
-                {
-                    AllowAdmin = true,
-                };
+                List<RedLockMultiplexer> multiplexers = new List<RedLockMultiplexer>();
 
                 foreach (string endpoint in redisEndpoints)
                 {
+                    ConfigurationOptions cfg = new ConfigurationOptions
+                    {
+                        AllowAdmin = true,
+                    };
+
                     cfg.EndPoints.Add(endpoint);
+
+                    string connStr = cfg.ToString();
+
+                    ConnectionMultiplexer conn = ConnectionMultiplexer.Connect(connStr);
+
+                    multiplexers.Add(conn);
                 }
-
-                string connStr = cfg.ToString();
-
-                _connection = ConnectionMultiplexer.Connect(connStr);
-
-                List<RedLockMultiplexer> multiplexers = new List<RedLockMultiplexer>
-                {
-                    _connection
-                };
 
                 _redlockFactory = RedLockFactory.Create(multiplexers);
             }
@@ -82,7 +80,6 @@ namespace DLock.LockClient.Services
             {
                 if (disposing)
                 {
-                    _connection?.Dispose();
                     _redlockFactory?.Dispose();
                 }
 
