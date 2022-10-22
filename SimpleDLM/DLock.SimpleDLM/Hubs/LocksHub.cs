@@ -20,7 +20,7 @@ namespace DLock.SimpleDLM.Hubs
             _distributedLockManager = distributedLockManager;
         }
 
-        public async Task<string> AcquireLockAsync(string resource, int timeoutMs)
+        public async Task<string> AcquireLockAsync(string resource, int timeoutMs, int waitTimeoutMs)
         {
             string lockId = Guid.NewGuid().ToString();
 
@@ -32,7 +32,8 @@ namespace DLock.SimpleDLM.Hubs
             {
                 LockId = lockId,
                 Resource = resource,
-                TimeoutMs = timeoutMs
+                TimeoutMs = timeoutMs,
+                WaitUntil = DateTime.UtcNow.AddMilliseconds(waitTimeoutMs)
             });
 
             return lockId;

@@ -42,7 +42,7 @@ namespace DLock.LockClient.Services
 
             await _hubConnection.StopAsync();
             await _hubConnection.StartAsync();
-            string lockId = await _hubConnection.InvokeAsync<string>("AcquireLockAsync", resource, timeoutMs);
+            string lockId = await _hubConnection.InvokeAsync<string>("AcquireLockAsync", resource, timeoutMs, waitTimeout.TotalMilliseconds);
 
             bool acquired = lockWait.Wait(waitTimeout);
 
