@@ -22,10 +22,10 @@ namespace DLock.LockClient.Services
 
         public string Implementation => "RedLock Redis DLM";
 
-        public async Task<string> AcquireLockAsync(string lockId, int timeoutMs, TimeSpan waitTimeout)
+        public async Task<string> AcquireLockAsync(string resource, int timeoutMs, TimeSpan waitTimeout)
         {
             IRedLock redLock = await _redlockFactory.CreateLockAsync(
-                lockId, TimeSpan.FromMilliseconds(timeoutMs), waitTimeout, TimeSpan.FromSeconds(0.5));
+                resource, TimeSpan.FromMilliseconds(timeoutMs), waitTimeout, TimeSpan.FromSeconds(0.5));
 
             if (redLock.IsAcquired)
             {
