@@ -5,13 +5,15 @@ namespace DLock.SimpleDLM.Models
 {
     public class AcquiredLockInfo : IEquatable<AcquiredLockInfo>
     {
-        public AcquiredLockInfo(string lockId, int timeoutMs = 7000)
+        public AcquiredLockInfo(string resource, string lockId = null, int timeoutMs = 7000)
         {
+            Resource = resource;
             LockId = lockId;
             AcquiredTime = DateTime.UtcNow;
             TimeoutMs = timeoutMs;
         }
 
+        public string Resource { get; set; }
         public string LockId { get; set; }
         public DateTime AcquiredTime { get; }
         public DateTime ValidUntil => AcquiredTime.AddMilliseconds(TimeoutMs);

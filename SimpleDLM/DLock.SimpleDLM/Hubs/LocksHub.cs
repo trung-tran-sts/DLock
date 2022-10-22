@@ -8,7 +8,7 @@ namespace DLock.SimpleDLM.Hubs
 {
     public interface ILocksHubClient
     {
-        Task NotifyLockAcquired(string lockId);
+        Task NotifyLockAcquired(string resource);
     }
 
     public class LocksHub : Hub<ILocksHubClient>
@@ -20,21 +20,27 @@ namespace DLock.SimpleDLM.Hubs
             _distributedLockManager = distributedLockManager;
         }
 
-        public async Task AcquireLockAsync(string lockId, int timeoutMs)
+        public async Task<string> AcquireLockAsync(string resource, int timeoutMs)
         {
-            Console.WriteLine($"{Context.ConnectionId} is acquiring lock {lockId}");
+            string lockId = Guid.NewGuid().ToString();
+
+            Console.WriteLine($"{lockId} is acquiring lock {resource}");
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, lockId);
 
             await _distributedLockManager.AcquireLockAsync(new LockRequest
             {
-                ConnectionId = Context.ConnectionId,
                 LockId = lockId,
-                TimeoutMs = timeoutMs,
+                Resource = resource,
+                TimeoutMs = timeoutMs
             });
+
+            return lockId;
         }
 
         public async Task ReleaseLockAsync(string lockId)
         {
-            Console.WriteLine($"{Context.ConnectionId} is releasing lock {lockId}");
+            Console.WriteLine($"Releasing lock {lockId}");
 
             await _distributedLockManager.ReleaseLockAsync(lockId);
         }

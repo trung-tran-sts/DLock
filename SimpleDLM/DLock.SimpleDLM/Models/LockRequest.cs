@@ -2,8 +2,8 @@
 {
     public class LockRequest
     {
+        public string Resource { get; set; }
         public string LockId { get; set; }
-        public string ConnectionId { get; set; }
         public int TimeoutMs { get; set; }
     }
 }

@@ -2,6 +2,7 @@
 using DLock.SimpleDLM.Models;
 using Microsoft.AspNetCore.SignalR;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,75 +18,90 @@ namespace DLock.SimpleDLM.Services
     public class DistributedLockManager : IDistributedLockManager
     {
         private readonly IHubContext<LocksHub, ILocksHubClient> _locksHubContext;
-        private readonly HashSet<AcquiredLockInfo> _acquiredLockSet;
-        private readonly SemaphoreSlim _semaphore;
+        private readonly ConcurrentDictionary<string, AcquiredLockInfo> _currentResourceLockInfoMap;
+        private readonly ConcurrentDictionary<string, AcquiredLockInfo> _lockInfoByIdMap;
         private readonly Dictionary<string, Queue<LockRequest>> _lockRequestQueueMap;
+        private readonly ConcurrentDictionary<string, SemaphoreSlim> _resourceSemaphoreMap;
 
         public DistributedLockManager(IHubContext<LocksHub, ILocksHubClient> locksHubContext)
         {
             _locksHubContext = locksHubContext;
-            _acquiredLockSet = new HashSet<AcquiredLockInfo>();
-            _semaphore = new SemaphoreSlim(1, 1);
             _lockRequestQueueMap = new Dictionary<string, Queue<LockRequest>>();
+            _resourceSemaphoreMap = new ConcurrentDictionary<string, SemaphoreSlim>();
+            _currentResourceLockInfoMap = new ConcurrentDictionary<string, AcquiredLockInfo>();
+            _lockInfoByIdMap = new ConcurrentDictionary<string, AcquiredLockInfo>();
         }
 
         public async Task AcquireLockAsync(LockRequest lockRequest)
         {
+            SemaphoreSlim semaphore = _resourceSemaphoreMap.GetOrAdd(lockRequest.Resource, (_) => new SemaphoreSlim(1, 1));
+
             try
             {
-                await _semaphore.WaitAsync();
+                await semaphore.WaitAsync();
 
                 if (!await TryGiveLockAsync(lockRequest))
                 {
-                    if (!_lockRequestQueueMap.TryGetValue(lockRequest.LockId, out Queue<LockRequest> queue))
+                    if (!_lockRequestQueueMap.TryGetValue(lockRequest.Resource, out Queue<LockRequest> queue))
                     {
                         queue = new Queue<LockRequest>();
-                        _lockRequestQueueMap[lockRequest.LockId] = queue;
+                        _lockRequestQueueMap[lockRequest.Resource] = queue;
                     }
 
                     queue.Enqueue(lockRequest);
 
-                    Console.WriteLine($"Lock request for {lockRequest.LockId} of {lockRequest.ConnectionId} was enqueued");
+                    Console.WriteLine($"Lock request for {lockRequest.Resource} with lock id {lockRequest.LockId} was enqueued");
                 }
             }
             finally
             {
-                _semaphore.Release();
+                semaphore?.Release();
             }
         }
 
         public async Task ReleaseLockAsync(string lockId)
         {
-            try
+            if (_lockInfoByIdMap.TryGetValue(lockId, out AcquiredLockInfo currentLock))
             {
-                await _semaphore.WaitAsync();
+                SemaphoreSlim semaphore = _resourceSemaphoreMap.GetOrAdd(currentLock.Resource, (_) => new SemaphoreSlim(1, 1));
 
-                _acquiredLockSet.Remove(new AcquiredLockInfo(lockId));
-
-                if (_lockRequestQueueMap.TryGetValue(lockId, out Queue<LockRequest> queue)
-                    && queue.TryDequeue(out LockRequest nextLockRequest))
+                try
                 {
-                    if (!await TryGiveLockAsync(nextLockRequest))
+                    await semaphore.WaitAsync();
+
+                    if (_lockInfoByIdMap.Remove(currentLock.LockId, out _)
+                        && _currentResourceLockInfoMap.Remove(currentLock.Resource, out _)
+                        && _resourceSemaphoreMap.Remove(currentLock.Resource, out _))
                     {
-                        throw new Exception(
-                            $"Cannot give lock {nextLockRequest.LockId}" +
-                            $" to connection {nextLockRequest.ConnectionId}");
+                        if (_lockRequestQueueMap.TryGetValue(currentLock.Resource, out Queue<LockRequest> queue)
+                            && queue.TryDequeue(out LockRequest nextLockRequest))
+                        {
+                            if (queue.Count == 0)
+                            {
+                                _lockRequestQueueMap.Remove(currentLock.Resource);
+                            }
+
+                            if (!await TryGiveLockAsync(nextLockRequest))
+                            {
+                                throw new Exception(
+                                    $"Cannot give lock {nextLockRequest.Resource}" +
+                                    $" to lock id {nextLockRequest.LockId}");
+                            }
+                        }
                     }
                 }
-
-            }
-            finally
-            {
-                _semaphore.Release();
+                finally
+                {
+                    semaphore?.Release();
+                }
             }
         }
 
         private async Task<bool> TryGiveLockAsync(LockRequest lockRequest)
         {
             bool acquired;
-            AcquiredLockInfo lockId = new AcquiredLockInfo(lockRequest.LockId);
 
-            if (_acquiredLockSet.TryGetValue(lockId, out AcquiredLockInfo currentLock))
+            if (_currentResourceLockInfoMap.TryGetValue(lockRequest.Resource, out AcquiredLockInfo currentLock))
             {
                 if (currentLock.ValidUntil > DateTime.UtcNow)
                 {
@@ -93,7 +109,8 @@ namespace DLock.SimpleDLM.Services
                 }
                 else
                 {
-                    _acquiredLockSet.Remove(currentLock);
+                    _currentResourceLockInfoMap.Remove(lockRequest.Resource, out _);
+                    _lockInfoByIdMap.Remove(lockRequest.LockId, out _);
                     acquired = true;
                 }
             }
@@ -104,11 +121,13 @@ namespace DLock.SimpleDLM.Services
 
             if (acquired)
             {
-                _acquiredLockSet.Add(new AcquiredLockInfo(lockRequest.LockId, lockRequest.TimeoutMs));
+                AcquiredLockInfo lockInfo = new AcquiredLockInfo(lockRequest.Resource, lockRequest.LockId, lockRequest.TimeoutMs);
+                _currentResourceLockInfoMap[lockRequest.Resource] = lockInfo;
+                _lockInfoByIdMap[lockRequest.LockId] = lockInfo;
 
-                Console.WriteLine($"{lockRequest.ConnectionId} acquired lock {lockRequest.LockId}");
+                Console.WriteLine($"Acquired lock {lockRequest.Resource} with lock id {lockRequest.LockId}");
 
-                await _locksHubContext.Clients.Client(lockRequest.ConnectionId).NotifyLockAcquired(lockRequest.LockId);
+                await _locksHubContext.Clients.Group(lockRequest.LockId).NotifyLockAcquired(lockRequest.Resource);
 
                 return true;
             }
