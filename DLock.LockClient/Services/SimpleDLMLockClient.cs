@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,26 +8,23 @@ namespace DLock.LockClient.Services
 {
     public class SimpleDLMLockClient : ILockClient
     {
-        private readonly ConcurrentDictionary<string, SemaphoreSlim> _lockWaitMap;
         private readonly string _locksHubUrl;
         public string Implementation => "Simple DLM";
 
         public SimpleDLMLockClient(IConfiguration configuration)
         {
             _locksHubUrl = configuration["SimpleDLMLocksHubUrl"];
-
-            _lockWaitMap = new ConcurrentDictionary<string, SemaphoreSlim>();
         }
 
         public async Task<string> AcquireLockAsync(string resource, int timeoutMs, TimeSpan waitTimeout)
         {
-            SemaphoreSlim lockWait = _lockWaitMap.GetOrAdd(resource, (_) => new SemaphoreSlim(0, 1));
+            SemaphoreSlim lockWait = new SemaphoreSlim(0, 1);
 
             HubConnection hubConnection = GetHubConnection();
 
             hubConnection.On("NotifyLockAcquired", () =>
             {
-                ReleaseLocalLock(resource);
+                lockWait.Release();
             });
 
             try
@@ -55,6 +51,7 @@ namespace DLock.LockClient.Services
         public async Task ReleaseLockAsync(string lockId)
         {
             HubConnection hubConnection = GetHubConnection();
+
             try
             {
                 await hubConnection.StartAsync();
@@ -63,14 +60,6 @@ namespace DLock.LockClient.Services
             finally
             {
                 if (hubConnection != null) await hubConnection?.DisposeAsync();
-            }
-        }
-
-        private void ReleaseLocalLock(string resource)
-        {
-            if (_lockWaitMap.TryRemove(resource, out SemaphoreSlim lockWait))
-            {
-                lockWait.Release();
             }
         }
 
